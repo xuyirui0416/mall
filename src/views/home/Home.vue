@@ -1,12 +1,13 @@
 <template>
   <div id="home">
     <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
+    <tab-control class="tab-control" ref="topTabControl" :titles="['流行','新款','精选']" @tabClick="tabClick" v-show="isShowTabControl"/>
 
     <scroll class="content" ref="scroll" :probe-type="3" @scroll="contentScroll" :pull-up-load="true" @pullingUp="loadMore">
-      <home-swiper :banners="banners"/>
+      <home-swiper :banners="banners" @swiperImageLoad="swiperImageLoad"/>
       <recommend-view :recommends="recommends"/>
       <feature-view/>
-      <tab-control class="tab-control" :titles="['流行','新款','精选']" @tabClick="tabClick"/>
+      <tab-control class="tab-control" ref="tabControl" :titles="['流行','新款','精选']" @tabClick="tabClick"/>
       <goods-list :goods="showGoods"/>
     </scroll>
 
@@ -52,7 +53,10 @@
           'sell': {page: 0,list: []}
         },
         currentType: 'pop',
-        isShowBackTop: false
+        isShowBackTop: false,
+        tabOffsetTop: 0,
+        isShowTabControl: false,
+        saveY: 0
       }
     },
     computed: {
@@ -68,8 +72,15 @@
       this.getHomeGoods('sell')
     },
     mounted(){
+      //防抖函数，防止频繁刷新
       const refresh = debounce(this.$refs.scroll.refresh,50)
       refresh()
+    },
+    activated(){
+      this.$refs.scroll.scrollTo(0,this.saveY)
+    },
+    deactivated(){
+      this.saveY = this.$refs.scroll.scroll.y
     },
     methods: {
       //网络请求的方法
@@ -103,19 +114,29 @@
             this.currentType = 'sell'
             break
         }
+        //让两个tabControl的currentIndex保持一致的方法
+        this.$refs.topTabControl.currentIndex = index
+        this.$refs.tabControl.currentIndex = index
       },
       //返回顶部的方法
       backClick(){
         this.$refs.scroll.scrollTo(0,0,500)
       },
       contentScroll(position){
+        //判断返回顶部的按钮是否出现
         this.isShowBackTop = (-position.y)>1000
+        //判断tab-bar是否出现
+        this.isShowTabControl = (-position.y)>this.tabOffsetTop
       },
       //上拉加载更多的方法
       loadMore(){
         this.getHomeGoods(this.currentType)
         //刷新页面 用于计算滚动高度不计入图片的bug
         this.$refs.scroll.refresh()
+      },
+      //轮播图加载完成之后，计算高度，用来让tab-bar吸顶效果
+      swiperImageLoad(){
+        this.tabOffsetTop = this.$refs.tabControl.$el.offsetTop
       }
     }
   }
@@ -123,7 +144,7 @@
 
 <style scoped>
   #home {
-    padding-top: 44px;
+    /*padding-top: 44px;*/
     height: 100vh;
     position: relative;
   }
@@ -131,15 +152,19 @@
     background-color: var(--color-tint);
     color: #fff;
 
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 0;
-    z-index: 9;
+    /*position: fixed;*/
+    /*left: 0;*/
+    /*right: 0;*/
+    /*top: 0;*/
+    /*z-index: 9;*/
   }
+  /*.tab-control {*/
+  /*  position: sticky;*/
+  /*  top: 44px;*/
+  /*  z-index: 9;*/
+  /*}*/
   .tab-control {
-    position: sticky;
-    top: 44px;
+    position: relative;
     z-index: 9;
   }
   .content {
